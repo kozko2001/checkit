@@ -1,0 +1,3 @@
+[submodule "milagro-crypto-js"]
+	path = milagro-crypto-js
+	url = https://github.com/milagro-crypto/milagro-crypto-js.git
