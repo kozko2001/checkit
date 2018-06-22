@@ -3,7 +3,6 @@ const CTX = require('./milagro-crypto-js');
 const curve = 'BN254';
 const ctx = new CTX(curve);
 
-
 export const setup = () => {
   // Set generator of G1
   const G1 = new ctx.ECP(0);
@@ -35,6 +34,27 @@ export const setup = () => {
     G2,
     order,
     ctx,
+  };
+};
+
+const AUTHORITY_KEY = {
+  x: new ctx.BIG(42),
+  y: new ctx.BIG(314),
+};
+
+export const keygen = () => {
+  const { G2 } = setup();
+
+  const pub2x = G2.mul(AUTHORITY_KEY.x);
+  const pub2y = G2.mul(AUTHORITY_KEY.y);
+
+  return {
+    private: AUTHORITY_KEY,
+    public: {
+      G2,
+      x: pub2x,
+      y: pub2y,
+    },
   };
 };
 
