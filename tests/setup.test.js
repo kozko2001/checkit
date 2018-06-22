@@ -1,4 +1,4 @@
-import { setup, keygen, prepareBlindSign } from '..';
+import { setup, keygen, prepareBlindSign, elgamalKeygen, elgamalEnc, elgamalDec } from '..';
 
 describe('Setup', () => {
   it('It should have a Generator G1', () => {
@@ -82,11 +82,63 @@ describe('KeyGen', () => {
   });
 });
 
+describe('elgamal', () => {
+  it('keygen random key', () => {
+    const params = setup();
+    const keys = elgamalKeygen(params);
+
+    expect(keys).toHaveProperty('private');
+    expect(keys).toHaveProperty('public');
+  });
+
+  it('keygen specific key', () => {
+    const params = setup();
+    const { ctx } = params;
+
+    const keys = elgamalKeygen(params, new ctx.BIG(42));
+
+    expect(keys.private.toString()).toStrictEqual('000000000000000000000000000000000000000000000000000000000000002a');
+  });
+
+  it('elgamal encryption', () => {
+    const params = setup();
+    const { G1, ctx } = params;
+    const keys = elgamalKeygen(params, new ctx.BIG(42));
+
+    const h = G1.mul(new ctx.BIG(999));
+    const m = new ctx.BIG(5);
+
+    const enc = elgamalEnc(params, keys.public, m, h);
+
+    expect(enc).toHaveProperty('a');
+    expect(enc).toHaveProperty('b');
+    expect(enc).toHaveProperty('k');
+  });
+
+  it('elgamal decryption', () => {
+    const params = setup();
+    const { G1, ctx } = params;
+    const keys = elgamalKeygen(params, new ctx.BIG(42));
+
+    const h = G1.mul(new ctx.BIG(999));
+    const m = new ctx.BIG(5);
+
+    const enc = elgamalEnc(params, keys.public, m, h);
+    const { a, b } = enc;
+    const dec = elgamalDec(params, keys.private, a, b);
+
+    const expected = h.mul(m);
+
+    expect(dec.toString()).toStrictEqual(expected.toString());
+  });
+});
+
 describe('prepareBlindSign', () => {
   it('', () => {
-    const { ctx } = setup();
+    const params = setup();
+    const { ctx } = params;
     const d = new ctx.BIG(42);
-    const m = "age=32"
-    prepareBlindSign(m, d);
+    const m = 'age=32';
+    prepareBlindSign(params, d, m);
   });
-})
+});

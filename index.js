@@ -7,13 +7,42 @@ const rng = new ctx.RAND();
 
 // TODO: this is not random...
 rng.clean();
-let i;
-let RAW = [];
-for (i = 0; i < 100; i++) {
-    RAW[i] = i;
+const RAW = [];
+for (let i = 0; i < 100; i += 1) {
+  RAW[i] = i;
 }
 
 rng.seed(100, RAW);
+
+/// TODO: Move hash and conversion utils to another file
+const stringToBytes = (s) => {
+  const b = [];
+  for (let i = 0; i < s.length; i += 1) { b.push(s.charCodeAt(i)); }
+  return b;
+};
+
+// From a string, calculates the hash => is a BigNumber
+const hashString = (m) => {
+  const bytes = stringToBytes(m);
+  hash.process_array(bytes);
+  return ctx.BIG.fromBytes(hash.hash());
+};
+
+const cloneECP = (p) => {
+  const clonedP = new ctx.ECP(0);
+  clonedP.copy(p);
+
+  return clonedP;
+};
+
+// hashes a message and then returns a point on the EC G
+const hashToPoint = (G, m) => {
+  const hashBN = hashString(m);
+  return G.mul(hashBN);
+};
+
+// Get a random number between 0 and BN
+const randomNumber = (Bn, _rng) => ctx.BIG.randomnum(Bn, _rng);
 
 export const setup = () => {
   // Set generator of G1
@@ -42,7 +71,7 @@ export const setup = () => {
   order.rcopy(ctx.ROM_CURVE.CURVE_Order);
 
   // h1
-  const h1 = G1.mul(new ctx.BIG(732489));
+  const h1 = hashToPoint(G1, 'h0');
 
   return {
     G1,
@@ -74,53 +103,64 @@ export const keygen = (x = AUTHORITY_KEY.x, y = AUTHORITY_KEY.y) => {
   };
 };
 
-const stringToBytes = (s) => {
-  var b = [];
-  for (var i = 0; i < s.length; i++)
-    b.push(s.charCodeAt(i));
-  return b;
-}
+export const elgamalKeygen = (params, privKey) => {
+  const { order, G1 } = params;
 
-// From a string, calculates the hash => is a BigNumber
-const hashString = (m) => {
-  const bytes = stringToBytes(m);
-  hash.process_array(bytes);
-  return ctx.BIG.fromBytes(hash.hash());
-}
+  let d = privKey;
+  if (!d) {
+    d = randomNumber(order, rng);
+  }
 
-const cloneECP = (p) => {
-  const clonedP = new ctx.ECP(0);
-  clonedP.copy(p)
+  const gamma = G1.mul(d);
 
-  return clonedP;
-}
+  return {
+    private: d,
+    public: gamma,
+  };
+};
 
+export const elgamalEnc = (params, gamma, m, h) => {
+  const { order, G1 } = params;
+
+  const k = randomNumber(order, rng);
+  const a = G1.mul(k);
+  const b = gamma.mul(k);
+  b.add(h.mul(m));
+
+  return {
+    a,
+    b,
+    k,
+  };
+};
+
+
+export const elgamalDec = (params, priv, a, b) => {
+  const x = a.mul(priv);
+  x.neg();
+
+  const y = cloneECP(b);
+  y.add(x);
+
+  return y;
+};
 
 // d = Elgammal secret key (from the user PoV)
 // m = message to encrypt
-export const prepareBlindSign = (m, d) => {
-  const { G1, h1, order } = setup();
+export const prepareBlindSign = (params, d, m) => {
+  const { G1, h1, order } = params;
 
   // Generates public key
   const gamma = G1.mul(d);
 
   // Create commitment cm = g1^m + h1^ro (being ro a random num)
-  const mHashed = hashString(m);
+  const g1_m = hashToPoint(G1, m);
   const ro = ctx.BIG.randomnum(order, rng);
   const h1_ro = h1.mul(ro);
 
-  let commitment = G1.mul(mHashed);
-  commitment.add(h1_ro);
+  g1_m.add(h1_ro);
+  const commitment = g1_m;
 
   // Hash the commitment
-  const hNum = hashString(commitment.toString())
-  const h = G1.mul(hNum);
-
-  // Create elgammal encryption (G1*k, gamma*k + h*m)
-  const k = ctx.BIG.randomnum(order, rng);
-  const gamma_k = cloneECP(gamma).mul(k)
-  const h_m = h.mul(mHashed)
-
-  const elgammal = [G1.mul(k), gamma_k.add(h_m)]
-
-}
+  const h = hashToPoint(G1, commitment.toString());
+};
