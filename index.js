@@ -2,6 +2,18 @@ const CTX = require('./milagro-crypto-js');
 
 const curve = 'BN254';
 const ctx = new CTX(curve);
+const hash = new ctx.HASH256();
+const rng = new ctx.RAND();
+
+// TODO: this is not random...
+rng.clean();
+let i;
+let RAW = [];
+for (i = 0; i < 100; i++) {
+    RAW[i] = i;
+}
+
+rng.seed(100, RAW);
 
 export const setup = () => {
   // Set generator of G1
@@ -29,11 +41,15 @@ export const setup = () => {
   const order = new ctx.BIG(0);
   order.rcopy(ctx.ROM_CURVE.CURVE_Order);
 
+  // h1
+  const h1 = G1.mul(new ctx.BIG(732489));
+
   return {
     G1,
     G2,
     order,
     ctx,
+    h1,
   };
 };
 
@@ -58,3 +74,52 @@ export const keygen = () => {
   };
 };
 
+const stringToBytes = (s) => {
+  var b = [];
+  for (var i = 0; i < s.length; i++)
+    b.push(s.charCodeAt(i));
+  return b;
+}
+
+const hashString = (m) => {
+  const bytes = stringToBytes(m);
+  hash.process_array(bytes);
+  return ctx.BIG.fromBytes(hash.hash());
+}
+
+const cloneECP = (p) => {
+  const clonedP = new ctx.ECP(0);
+  clonedP.copy(p)
+
+  return clonedP;
+}
+
+
+// d = Elgammal secret key (from the user PoV)
+// m = message to encrypt
+export const prepareBlindSign = (m, d) => {
+  const { G1, h1, order } = setup();
+
+  // Generates public key
+  const gamma = G1.mul(d);
+
+  // Create commitment cm = g1^m + h1^ro (being ro a random num)
+  const mHashed = hashString(m);
+  const ro = ctx.BIG.randomnum(order, rng);
+  const h1_ro = h1.mul(ro);
+
+  let commitment = G1.mul(mHashed);
+  commitment.add(h1_ro);
+
+  // Hash the commitment
+  const hNum = hashString(commitment.toString())
+  const h = G1.mul(hNum);
+
+  // Create elgammal encryption (G1*k, gamma*k + h*m)
+  const k = ctx.BIG.randomnum(order, rng);
+  const gamma_k = cloneECP(gamma).mul(k)
+  const h_m = h.mul(mHashed)
+
+  const elgammal = [G1.mul(k), gamma_k.add(h_m)]
+
+}

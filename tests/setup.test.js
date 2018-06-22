@@ -1,4 +1,4 @@
-import { setup, keygen } from '..';
+import { setup, keygen, prepareBlindSign } from '..';
 
 describe('Setup', () => {
   it('It should have a Generator G1', () => {
@@ -81,3 +81,12 @@ describe('KeyGen', () => {
     expect(calcPubY).toStrictEqual(keys.public.y);
   });
 });
+
+describe('prepareBlindSign', () => {
+  it('', () => {
+    const { ctx } = setup();
+    const d = new ctx.BIG(42);
+    const m = "age=32"
+    prepareBlindSign(m, d);
+  });
+})
