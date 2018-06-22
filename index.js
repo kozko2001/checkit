@@ -81,6 +81,7 @@ const stringToBytes = (s) => {
   return b;
 }
 
+// From a string, calculates the hash => is a BigNumber
 const hashString = (m) => {
   const bytes = stringToBytes(m);
   hash.process_array(bytes);
