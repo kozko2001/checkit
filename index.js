@@ -42,11 +42,11 @@ const AUTHORITY_KEY = {
   y: new ctx.BIG(314),
 };
 
-export const keygen = () => {
+export const keygen = (x = AUTHORITY_KEY.x, y = AUTHORITY_KEY.y) => {
   const { G2 } = setup();
 
-  const pub2x = G2.mul(AUTHORITY_KEY.x);
-  const pub2y = G2.mul(AUTHORITY_KEY.y);
+  const pub2x = G2.mul(x);
+  const pub2y = G2.mul(y);
 
   return {
     private: AUTHORITY_KEY,
