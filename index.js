@@ -297,7 +297,22 @@ export const blindSign = (params, privateKeyAuth, cm, a, b, publicKeyUser, proof
 };
 
 export const unblindSign = (params, sigmaTilde, privateKeyUser) => {
-  const { t2, t3 } = sigmaTilde;
-  return elgamalDec(params, privateKeyUser, t2, t3);
+  const { h, t2, t3 } = sigmaTilde;
+  const sigma = elgamalDec(params, privateKeyUser, t2, t3);
+  return {
+    h,
+    sigma,
+  };
 };
 
+
+export const randomize = (params, sign) => {
+  const { order } = params;
+  const { h, sigma } = sign;
+  const r = randomNumber(order, rng);
+
+  return {
+    h: h.mul(r),
+    sigma: sigma.mul(r),
+  };
+};

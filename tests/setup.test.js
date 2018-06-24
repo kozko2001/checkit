@@ -1,4 +1,4 @@
-import { setup, keygen, prepareBlindSign, elgamalKeygen, elgamalEnc, elgamalDec, hashString, verify_pi_s, blindSign, unblindSign} from '..';
+import { setup, keygen, prepareBlindSign, elgamalKeygen, elgamalEnc, elgamalDec, hashString, verify_pi_s, blindSign, unblindSign, randomize} from '..';
 
 describe('Setup', () => {
   it('It should have a Generator G1', () => {
@@ -214,9 +214,48 @@ describe('blind sign', () => {
     const sigmaTilde = blindSign(params, privateKeyAuth, cm, a, b, publicKeyUser, proof);
 
     const sign = unblindSign(params, sigmaTilde, privateKeyUser);
-    expect(sign).toHaveProperty('x');
-    expect(sign).toHaveProperty('y');
-    expect(sign).toHaveProperty('z');
-    expect(sign).toHaveProperty('INF', false);
+    const { sigma } = sign;
+
+    expect(sigma).toHaveProperty('x');
+    expect(sigma).toHaveProperty('y');
+    expect(sigma).toHaveProperty('z');
+    expect(sigma).toHaveProperty('INF', false);
+  });
+});
+
+describe('randomize', () => {
+  let params, sign;
+
+  beforeEach(() => {
+    params = setup();
+    const { ctx } = params;
+
+    const keysAuth = keygen(new ctx.BIG(40), new ctx.BIG(42));
+    const keyUser = elgamalKeygen(params, new ctx.BIG(90));
+    const publicKeyUser = keyUser.public;
+    const privateKeyUser = keyUser.private;
+    const privateKeyAuth = keysAuth.private;
+
+    const m = hashString('age=32', params.order);
+    const blindSignPrep = prepareBlindSign(params, publicKeyUser, m);
+    const {
+      cm,
+      proof,
+      a,
+      b,
+    } = blindSignPrep;
+    const sigmaTilde = blindSign(params, privateKeyAuth, cm, a, b, publicKeyUser, proof);
+
+    sign = unblindSign(params, sigmaTilde, privateKeyUser);
+  });
+
+  it('randomize sigma by multipling h and the dec by a random number', () => {
+    const sign_randomized = randomize(params, sign);
+    const { sigma } = sign_randomized;
+
+    expect(sigma).toHaveProperty('x');
+    expect(sigma).toHaveProperty('y');
+    expect(sigma).toHaveProperty('z');
+    expect(sigma).toHaveProperty('INF', false);
   });
 });
