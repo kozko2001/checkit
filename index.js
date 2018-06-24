@@ -316,3 +316,26 @@ export const randomize = (params, sign) => {
     sigma: sigma.mul(r),
   };
 };
+
+export const show_blind_sign = (params, vk, sigma, m) => {
+  const { order } = params;
+  const { G2, x: alpha, y: beta } = vk;
+  const { h } = sigma;
+
+  const t = randomNumber(order, rng);
+
+  const kappa = G2.mul(t);
+  const kappa_1 = beta.mul(m);
+
+  kappa.add(alpha);
+  kappa.add(kappa_1);
+
+
+  const nu = h.mul(t);
+
+  return {
+    kappa,
+    nu,
+    pi_v: 1,
+  };
+};
