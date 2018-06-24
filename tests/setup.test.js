@@ -1,4 +1,4 @@
-import { setup, keygen, prepareBlindSign, elgamalKeygen, elgamalEnc, elgamalDec } from '..';
+import { setup, keygen, prepareBlindSign, elgamalKeygen, elgamalEnc, elgamalDec, hashString, verify_pi_s } from '..';
 
 describe('Setup', () => {
   it('It should have a Generator G1', () => {
@@ -134,11 +134,39 @@ describe('elgamal', () => {
 });
 
 describe('prepareBlindSign', () => {
-  it('', () => {
+  let keys;
+
+  beforeEach(() => {
     const params = setup();
     const { ctx } = params;
-    const d = new ctx.BIG(42);
-    const m = 'age=32';
-    prepareBlindSign(params, d, m);
+    keys = elgamalKeygen(params, new ctx.BIG(42));
+  });
+
+  it('prepare blind sing contains important attributes', () => {
+    const params = setup();
+
+    const m = hashString('age=32', params.order);
+    const blindSign = prepareBlindSign(params, keys.public, m);
+
+    expect(blindSign).toHaveProperty('a');
+    expect(blindSign).toHaveProperty('b');
+    expect(blindSign).toHaveProperty('cm');
+    expect(blindSign).toHaveProperty('proof');
+  });
+
+  it('verify ZKP of blindSign', () => {
+    const params = setup();
+
+    const m = hashString('age=32', params.order);
+    const blindSign = prepareBlindSign(params, keys.public, m);
+    const {
+      proof,
+      a,
+      b,
+      cm,
+    } = blindSign;
+
+    const ok = verify_pi_s(params, keys.public, a, b, cm, proof);
+    expect(ok).toBe(true);
   });
 });
