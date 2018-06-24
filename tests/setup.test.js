@@ -1,4 +1,4 @@
-import { setup, keygen, prepareBlindSign, elgamalKeygen, elgamalEnc, elgamalDec, hashString, verify_pi_s } from '..';
+import { setup, keygen, prepareBlindSign, elgamalKeygen, elgamalEnc, elgamalDec, hashString, verify_pi_s, blindSign, unblindSign} from '..';
 
 describe('Setup', () => {
   it('It should have a Generator G1', () => {
@@ -146,27 +146,77 @@ describe('prepareBlindSign', () => {
     const params = setup();
 
     const m = hashString('age=32', params.order);
-    const blindSign = prepareBlindSign(params, keys.public, m);
+    const blindSignPrep = prepareBlindSign(params, keys.public, m);
 
-    expect(blindSign).toHaveProperty('a');
-    expect(blindSign).toHaveProperty('b');
-    expect(blindSign).toHaveProperty('cm');
-    expect(blindSign).toHaveProperty('proof');
+    expect(blindSignPrep).toHaveProperty('a');
+    expect(blindSignPrep).toHaveProperty('b');
+    expect(blindSignPrep).toHaveProperty('cm');
+    expect(blindSignPrep).toHaveProperty('proof');
   });
 
   it('verify ZKP of blindSign', () => {
     const params = setup();
 
     const m = hashString('age=32', params.order);
-    const blindSign = prepareBlindSign(params, keys.public, m);
+    const blindSignPreparation = prepareBlindSign(params, keys.public, m);
     const {
       proof,
       a,
       b,
       cm,
-    } = blindSign;
+    } = blindSignPreparation;
 
     const ok = verify_pi_s(params, keys.public, a, b, cm, proof);
     expect(ok).toBe(true);
+  });
+});
+
+describe('blind sign', () => {
+  let publicKeyUser, privateKeyUser, privateKeyAuth, blindSignPrep, params;
+
+  beforeEach(() => {
+    params = setup();
+    const { ctx } = params;
+
+    const keysAuth = keygen(new ctx.BIG(40), new ctx.BIG(42));
+    const keyUser = elgamalKeygen(params, new ctx.BIG(90));
+    publicKeyUser = keyUser.public;
+    privateKeyUser = keyUser.private;
+    privateKeyAuth = keysAuth.private;
+
+    const m = hashString('age=32', params.order);
+    blindSignPrep = prepareBlindSign(params, publicKeyUser, m);
+  });
+
+  it('calc sigma_tilde', () => {
+    const {
+      cm,
+      proof,
+      a,
+      b,
+    } = blindSignPrep;
+
+    const sign = blindSign(params, privateKeyAuth, cm, a, b, publicKeyUser, proof);
+
+    expect(sign).toHaveProperty('h');
+    expect(sign).toHaveProperty('t2');
+    expect(sign).toHaveProperty('t3');
+  });
+
+  it('unblind sign (get simaga from sigma_tilde)', () => {
+    const {
+      cm,
+      proof,
+      a,
+      b,
+    } = blindSignPrep;
+
+    const sigmaTilde = blindSign(params, privateKeyAuth, cm, a, b, publicKeyUser, proof);
+
+    const sign = unblindSign(params, sigmaTilde, privateKeyUser);
+    expect(sign).toHaveProperty('x');
+    expect(sign).toHaveProperty('y');
+    expect(sign).toHaveProperty('z');
+    expect(sign).toHaveProperty('INF', false);
   });
 });

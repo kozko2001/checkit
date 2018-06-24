@@ -96,7 +96,10 @@ export const keygen = (x = AUTHORITY_KEY.x, y = AUTHORITY_KEY.y) => {
   const pub2y = G2.mul(y);
 
   return {
-    private: AUTHORITY_KEY,
+    private: {
+      x,
+      y,
+    },
     public: {
       G2,
       x: pub2x,
@@ -249,6 +252,7 @@ export const verify_pi_s = (params, gamma, a, b, cm, proof) => {
     rm,
     rr,
   } = proof;
+
   // compute h
   const h = hashToPoint(G1, cm.toString(), order);
 
@@ -272,3 +276,28 @@ export const verify_pi_s = (params, gamma, a, b, cm, proof) => {
 
   return ctx.BIG.comp(calc_c, c) === 0;
 };
+
+export const blindSign = (params, privateKeyAuth, cm, a, b, publicKeyUser, proof) => {
+  const { G1, order } = params;
+  const { x, y } = privateKeyAuth;
+
+  // compute h
+  const h = hashToPoint(G1, cm.toString(), order);
+
+  const t2 = a.mul(y);
+  const t3 = h.mul(x);
+  const t3_2 = b.mul(y);
+  t3.add(t3_2);
+
+  return {
+    h,
+    t2,
+    t3,
+  };
+};
+
+export const unblindSign = (params, sigmaTilde, privateKeyUser) => {
+  const { t2, t3 } = sigmaTilde;
+  return elgamalDec(params, privateKeyUser, t2, t3);
+};
+
