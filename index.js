@@ -155,6 +155,7 @@ export const prepareBlindSign = (params, gamma, m) => {
 
   // Create commitment cm = g1^m + h1^ro (being ro a random num)
   const r = randomNumber(order, rng);
+
   const cm = G1.mul(r);
   cm.add(h1.mul(m));
 
@@ -330,7 +331,6 @@ export const show_blind_sign = (params, vk, sigma, m) => {
   kappa.add(alpha);
   kappa.add(kappa_1);
 
-
   const nu = h.mul(t);
 
   return {
@@ -389,19 +389,16 @@ export const blind_verify = (params, vk, sign_sigma, kappa, nu, pi_v) => {
     return false;
   }
 
-  console.log(h.is_infinity());
-
   // e(h, kappa)
   let z1 = ctx.PAIR.ate(kappa, h);
   z1 = ctx.PAIR.fexp(z1);
-
-  console.log('z1', z1.toString());
 
   // e(s+nu, g2)
   nu.add(sigma);
   let z2 = ctx.PAIR.ate(G2, nu);
   z2 = ctx.PAIR.fexp(z2);
-  console.log('z2', z2.toString());
+
+  return z2.equals(z1);
 }
 
 export const verify_pi_v = (params, vk, sigma, kappa, nu, pi_v) => {

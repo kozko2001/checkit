@@ -24,5 +24,7 @@ describe('integration test...', () => {
     const { kappa, nu, pi_v } = show_blind_sign(params, vk, sigma, m);
 
     const verified = blind_verify(params, vk, sigma, kappa, nu, pi_v);
+
+    expect(verified).toStrictEqual(true);
   });
 });
