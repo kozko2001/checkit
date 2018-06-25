@@ -369,7 +369,7 @@ export const make_pi_v = (params, vk, sigma, m, t) => {
   let wt_1 = ctx.BIG.modmul(t, c, order);
   wt_1 = ctx.BIG.modneg(wt_1, order);
   wt_1.norm();
-  rt.add(wm_1);
+  rt.add(wt_1);
   rt.mod(order);
   rt.norm();
 
@@ -379,3 +379,54 @@ export const make_pi_v = (params, vk, sigma, m, t) => {
     c,
   };
 };
+
+export const blind_verify = (params, vk, sign_sigma, kappa, nu, pi_v) => {
+  const { h, sigma } = sign_sigma;
+  const { G2 } = params;
+  const verified = verify_pi_v(params, vk, sign_sigma, kappa, nu, pi_v);
+  
+  if (!verified) {
+    return false;
+  }
+
+  console.log(h.is_infinity());
+
+  // e(h, kappa)
+  let z1 = ctx.PAIR.ate(kappa, h);
+  z1 = ctx.PAIR.fexp(z1);
+
+  console.log('z1', z1.toString());
+
+  // e(s+nu, g2)
+  nu.add(sigma);
+  let z2 = ctx.PAIR.ate(G2, nu);
+  z2 = ctx.PAIR.fexp(z2);
+  console.log('z2', z2.toString());
+}
+
+export const verify_pi_v = (params, vk, sigma, kappa, nu, pi_v) => {
+  const { order, G1, h1 } = params;
+  const { G2, x: alpha, y: beta } = vk;
+  const { c, rm, rt } = pi_v;
+  const { h } = sigma;
+
+  const Aw = kappa.mul(c);
+  const Aw2 = G2.mul(rt);
+  const Aw3 = beta.mul(rm);
+
+  const negc = ctx.BIG.modneg(c, order);
+  const one = new ctx.BIG(1);
+  negc.add(one);
+  const Aw4 = alpha.mul(negc);
+
+  Aw.add(Aw2);
+  Aw.add(Aw3);
+  Aw.add(Aw4);
+
+  const Bw = nu.mul(c);
+  const Bw2 = h.mul(rt);
+  Bw.add(Bw2);
+
+  const calc_c = to_challange([G1, G2, alpha, Aw, Bw, h1, beta], order);
+  return ctx.BIG.comp(calc_c, c) === 0;
+}

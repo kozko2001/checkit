@@ -1,4 +1,4 @@
-import { setup, keygen, prepareBlindSign, elgamalKeygen, elgamalEnc, elgamalDec, hashString, verify_pi_s, blindSign, unblindSign, randomize, show_blind_sign } from '..';
+import { setup, keygen, prepareBlindSign, elgamalKeygen, hashString, blindSign, unblindSign, randomize, show_blind_sign, blind_verify } from '..';
 
 describe('integration test...', () => {
 
@@ -23,6 +23,6 @@ describe('integration test...', () => {
 
     const { kappa, nu, pi_v } = show_blind_sign(params, vk, sigma, m);
 
-    // const verified = blind_verify(params, vk, sigma, kappa, nu, pi_v);
+    const verified = blind_verify(params, vk, sigma, kappa, nu, pi_v);
   });
 });
