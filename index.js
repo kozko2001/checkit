@@ -336,6 +336,46 @@ export const show_blind_sign = (params, vk, sigma, m) => {
   return {
     kappa,
     nu,
-    pi_v: 1,
+    pi_v: make_pi_v(params, vk, sigma, m, t),
+  };
+};
+
+export const make_pi_v = (params, vk, sigma, m, t) => {
+  const { order, G1, h1 } = params;
+  const { G2, x: alpha, y: beta } = vk;
+  const { h } = sigma;
+
+  const wm = randomNumber(order, rng);
+  const wt = randomNumber(order, rng);
+
+  const Aw = G2.mul(wt);
+  const Aw_1 = beta.mul(wm);
+  Aw.add(alpha);
+  Aw.add(Aw_1);
+
+  const Bw = h.mul(wt);
+
+  const c = to_challange([G1, G2, alpha, Aw, Bw, h1, beta], order);
+
+  const rm = wm;
+  let wm_1 = ctx.BIG.modmul(m, c, order);
+  wm_1 = ctx.BIG.modneg(wm_1, order);
+  wm_1.norm();
+  rm.add(wm_1);
+  rm.mod(order);
+  rm.norm();
+
+  const rt = wt;
+  let wt_1 = ctx.BIG.modmul(t, c, order);
+  wt_1 = ctx.BIG.modneg(wt_1, order);
+  wt_1.norm();
+  rt.add(wm_1);
+  rt.mod(order);
+  rt.norm();
+
+  return {
+    rm,
+    rt,
+    c,
   };
 };
