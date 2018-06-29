@@ -395,6 +395,8 @@ export const blind_verify = (params, vk, sign_sigma, kappa, nu, pi_v) => {
 
   // e(s+nu, g2)
   nu.add(sigma);
+  nu.affine(); // no idea what it does but seen on the test file
+
   let z2 = ctx.PAIR.ate(G2, nu);
   z2 = ctx.PAIR.fexp(z2);
 
